@@ -1,0 +1,65 @@
+.feature-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='dark'] .feature-card {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.grid-panel {
+  height: 36rem;
+}
+
+.file-preview {
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+}
+
+.file-preview--document {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.file-preview__image,
+.job-card__doc-image {
+  width: 100%;
+  max-width: 14rem;
+  border-radius: 0.85rem;
+  object-fit: cover;
+}
+
+.file-preview__pdf,
+.job-card__pdf {
+  width: 100%;
+  min-height: 18rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 0.85rem;
+}
+
+.feature-card--job {
+  height: 100%;
+}
+
+.chart-panel {
+  height: 22rem;
+}
+
+.chart-panel--wide {
+  height: 24rem;
+}
+
+@media (max-width: 899px) {
+  .grid-panel {
+    height: 32rem;
+  }
+
+  .chart-panel,
+  .chart-panel--wide {
+    height: 18rem;
+  }
+}

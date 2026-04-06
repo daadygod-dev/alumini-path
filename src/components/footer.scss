@@ -1,0 +1,15 @@
+.footer {
+  font-family: 'Inter Tight', sans-serif;
+  color: #555;
+ 
+
+  a {
+    color: #555;
+    transition: color 0.2s ease;
+     font-size: x-small;
+
+    &:hover {
+      color: #000;
+    }
+  }
+}
