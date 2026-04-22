@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { Avatar, Box, Button, Card, CardContent, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Avatar, Box, Button, Card, CardContent, Chip, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import toast from 'react-hot-toast';
 import { createPreview, validateImage } from '../utils/fileValidation.js';
+import {
+  departments,
+  getOrganizationFieldLabel,
+  getRoleFieldLabel,
+  getRoleLabel,
+  getYearFieldLabel,
+} from '../data/platformConfig.js';
 import '../styles/feature-pages.scss';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,6 +31,10 @@ export default function ProfilePage({ currentProfile, onSaveProfile }) {
   });
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState(currentProfile?.avatar || null);
+
+  const yearLabel = useMemo(() => getYearFieldLabel(currentProfile?.role), [currentProfile?.role]);
+  const roleFieldLabel = useMemo(() => getRoleFieldLabel(currentProfile?.role), [currentProfile?.role]);
+  const organizationLabel = useMemo(() => getOrganizationFieldLabel(currentProfile?.role), [currentProfile?.role]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -55,9 +66,9 @@ export default function ProfilePage({ currentProfile, onSaveProfile }) {
     if (!form.fullName.trim()) nextErrors.fullName = 'Full name is required.';
     if (!emailPattern.test(form.email)) nextErrors.email = 'Enter a valid email address.';
     if (!form.department) nextErrors.department = 'Department is required.';
-    if (!/^\d{4}$/.test(form.graduationYear)) nextErrors.graduationYear = 'Graduation year must be numeric.';
-    if (!form.currentRole.trim()) nextErrors.currentRole = 'Current role is required.';
-    if (!form.company.trim()) nextErrors.company = 'Current company is required.';
+    if (!/^\d{4}$/.test(form.graduationYear)) nextErrors.graduationYear = `${yearLabel} must be numeric.`;
+    if (!form.currentRole.trim()) nextErrors.currentRole = `${roleFieldLabel} is required.`;
+    if (!form.company.trim()) nextErrors.company = `${organizationLabel} is required.`;
     if (!form.skills.trim()) nextErrors.skills = 'At least one skill set is required.';
     if (errors.avatar) nextErrors.avatar = errors.avatar;
 
@@ -91,9 +102,10 @@ export default function ProfilePage({ currentProfile, onSaveProfile }) {
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">Edit Profile Information</Typography>
+        <Typography variant="h4">Profile Information</Typography>
         <Typography variant="body1" color="text.secondary">
-          Update your account details, current job information, and skill sets. Changes are stored in localStorage.
+          Update the details that shape your {getRoleLabel(currentProfile.role).toLowerCase()} workspace and community
+          visibility.
         </Typography>
       </Box>
 
@@ -106,12 +118,16 @@ export default function ProfilePage({ currentProfile, onSaveProfile }) {
                   <Avatar src={preview?.url} sx={{ width: 104, height: 104 }}>
                     {form.fullName.slice(0, 1)}
                   </Avatar>
+                  <Chip size="small" label={getRoleLabel(currentProfile.role)} />
                   <Button component="label" variant="outlined">
                     Upload profile photo
                     <input hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
                   </Button>
                   <Typography variant="caption" color={errors.avatar ? 'error' : 'text.secondary'}>
                     {errors.avatar || 'Accepted types: JPG, PNG, WEBP. Max size: 2MB.'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {currentProfile.connections?.length || 0} active connection(s)
                   </Typography>
                 </Stack>
               </Grid>
@@ -125,26 +141,27 @@ export default function ProfilePage({ currentProfile, onSaveProfile }) {
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField label="Department" name="department" value={form.department} onChange={handleChange} error={Boolean(errors.department)} helperText={errors.department} select fullWidth>
-                      <MenuItem value="Information Technology">Information Technology</MenuItem>
-                      <MenuItem value="Computer Science">Computer Science</MenuItem>
-                      <MenuItem value="Business Information Systems">Business Information Systems</MenuItem>
-                      <MenuItem value="Networking">Networking</MenuItem>
+                      {departments.map((department) => (
+                        <MenuItem key={department} value={department}>
+                          {department}
+                        </MenuItem>
+                      ))}
                     </TextField>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Graduation year" name="graduationYear" value={form.graduationYear} onChange={handleChange} error={Boolean(errors.graduationYear)} helperText={errors.graduationYear} fullWidth />
+                    <TextField label={yearLabel} name="graduationYear" value={form.graduationYear} onChange={handleChange} error={Boolean(errors.graduationYear)} helperText={errors.graduationYear} fullWidth />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Current role" name="currentRole" value={form.currentRole} onChange={handleChange} error={Boolean(errors.currentRole)} helperText={errors.currentRole} fullWidth />
+                    <TextField label={roleFieldLabel} name="currentRole" value={form.currentRole} onChange={handleChange} error={Boolean(errors.currentRole)} helperText={errors.currentRole} fullWidth />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Current company" name="company" value={form.company} onChange={handleChange} error={Boolean(errors.company)} helperText={errors.company} fullWidth />
+                    <TextField label={organizationLabel} name="company" value={form.company} onChange={handleChange} error={Boolean(errors.company)} helperText={errors.company} fullWidth />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField label="Location" name="location" value={form.location} onChange={handleChange} fullWidth />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Employment sector" name="employmentSector" value={form.employmentSector} onChange={handleChange} fullWidth />
+                    <TextField label="Sector" name="employmentSector" value={form.employmentSector} onChange={handleChange} fullWidth />
                   </Grid>
                   <Grid size={12}>
                     <TextField label="Skill sets" name="skills" value={form.skills} onChange={handleChange} error={Boolean(errors.skills)} helperText={errors.skills || 'Separate multiple skills with commas.'} fullWidth />

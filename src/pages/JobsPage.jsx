@@ -19,6 +19,7 @@ import {
 import { AttachFileRounded, DeleteOutlineRounded } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { createPreview, validateJobDocument } from '../utils/fileValidation.js';
+import { canManageJobs, getRoleLabel, sectors } from '../data/platformConfig.js';
 import '../styles/feature-pages.scss';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +36,8 @@ const emptyForm = {
   applicants: '',
 };
 
-export default function JobsPage({ jobs, onAddJob, onDeleteJob }) {
+export default function JobsPage({ jobs, currentUser, onAddJob, onDeleteJob }) {
+  const canPublishJobs = canManageJobs(currentUser.role);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState(null);
@@ -99,178 +101,180 @@ export default function JobsPage({ jobs, onAddJob, onDeleteJob }) {
     setForm(emptyForm);
     setPreview(null);
     setErrors({});
-    toast.success('Job referral published.');
+    toast.success('Opportunity published.');
   };
 
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">Job Referral Module</Typography>
+        <Typography variant="h4">Opportunity Board</Typography>
         <Typography variant="body1" color="text.secondary">
-          Publish alumni referrals, upload previewable PDF or image briefs, capture qualifications, and track applicant
-          pipelines.
+          Students can browse openings, while alumni, employees, and school leaders can publish and manage referral
+          posts.
         </Typography>
       </Box>
 
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <Card elevation={0} className="feature-card">
-            <CardContent>
-              <Typography variant="h5" gutterBottom>
-                Post a new job
-              </Typography>
-              <Box component="form" onSubmit={handleSubmit}>
-                <Grid container spacing={2}>
-                  <Grid size={12}>
-                    <TextField
-                      label="Job title"
-                      name="title"
-                      value={form.title}
-                      onChange={handleChange}
-                      error={Boolean(errors.title)}
-                      helperText={errors.title}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Company"
-                      name="company"
-                      value={form.company}
-                      onChange={handleChange}
-                      error={Boolean(errors.company)}
-                      helperText={errors.company}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="Location" name="location" value={form.location} onChange={handleChange} fullWidth />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Job type"
-                      name="type"
-                      select
-                      value={form.type}
-                      onChange={handleChange}
-                      error={Boolean(errors.type)}
-                      helperText={errors.type}
-                      fullWidth
-                    >
-                      <MenuItem value="Full-time">Full-time</MenuItem>
-                      <MenuItem value="Part-time">Part-time</MenuItem>
-                      <MenuItem value="Internship">Internship</MenuItem>
-                      <MenuItem value="Contract">Contract</MenuItem>
-                    </TextField>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Sector"
-                      name="sector"
-                      select
-                      value={form.sector}
-                      onChange={handleChange}
-                      error={Boolean(errors.sector)}
-                      helperText={errors.sector}
-                      fullWidth
-                    >
-                      <MenuItem value="Software">Software</MenuItem>
-                      <MenuItem value="Analytics">Analytics</MenuItem>
-                      <MenuItem value="Education">Education</MenuItem>
-                      <MenuItem value="Operations">Operations</MenuItem>
-                      <MenuItem value="Finance">Finance</MenuItem>
-                    </TextField>
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Qualifications"
-                      name="qualifications"
-                      value={form.qualifications}
-                      onChange={handleChange}
-                      helperText={errors.qualifications || 'Separate items with commas.'}
-                      error={Boolean(errors.qualifications)}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Job summary"
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                      error={Boolean(errors.description)}
-                      helperText={errors.description}
-                      multiline
-                      minRows={3}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Applicant tracker"
-                      name="applicants"
-                      value={form.applicants}
-                      onChange={handleChange}
-                      helperText="Optional comma-separated applicant names."
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Contact email"
-                      name="contactEmail"
-                      value={form.contactEmail}
-                      onChange={handleChange}
-                      error={Boolean(errors.contactEmail)}
-                      helperText={errors.contactEmail}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid size={12}>
-                    <Button component="label" variant="outlined" fullWidth startIcon={<AttachFileRounded />}>
-                      Upload job brief
-                      <input hidden type="file" accept="application/pdf,image/png,image/jpeg,image/webp" onChange={handleDocumentChange} />
-                    </Button>
-                    <Typography variant="caption" color={errors.document ? 'error' : 'text.secondary'}>
-                      {errors.document || 'Accepted types: PDF, JPG, PNG, WEBP. Max size: 5MB.'}
-                    </Typography>
-                    {preview && (
-                      <Box className="file-preview file-preview--document">
-                        <Box>
-                          <Typography variant="body2">{preview.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {(preview.size / 1024).toFixed(1)} KB
-                          </Typography>
-                        </Box>
-                        {preview.type.startsWith('image/') ? (
-                          <img src={preview.url} alt={preview.name} className="file-preview__image" />
-                        ) : (
-                          <>
-                            <object data={preview.url} type="application/pdf" className="file-preview__pdf">
+        {canPublishJobs && (
+          <Grid size={{ xs: 12, xl: 4 }}>
+            <Card elevation={0} className="feature-card">
+              <CardContent>
+                <Typography variant="h5" gutterBottom>
+                  Post a new opportunity
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit}>
+                  <Grid container spacing={2}>
+                    <Grid size={12}>
+                      <TextField
+                        label="Job title"
+                        name="title"
+                        value={form.title}
+                        onChange={handleChange}
+                        error={Boolean(errors.title)}
+                        helperText={errors.title}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        label="Company"
+                        name="company"
+                        value={form.company}
+                        onChange={handleChange}
+                        error={Boolean(errors.company)}
+                        helperText={errors.company}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField label="Location" name="location" value={form.location} onChange={handleChange} fullWidth />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        label="Job type"
+                        name="type"
+                        select
+                        value={form.type}
+                        onChange={handleChange}
+                        error={Boolean(errors.type)}
+                        helperText={errors.type}
+                        fullWidth
+                      >
+                        <MenuItem value="Full-time">Full-time</MenuItem>
+                        <MenuItem value="Part-time">Part-time</MenuItem>
+                        <MenuItem value="Internship">Internship</MenuItem>
+                        <MenuItem value="Contract">Contract</MenuItem>
+                      </TextField>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        label="Sector"
+                        name="sector"
+                        select
+                        value={form.sector}
+                        onChange={handleChange}
+                        error={Boolean(errors.sector)}
+                        helperText={errors.sector}
+                        fullWidth
+                      >
+                        {sectors.map((sector) => (
+                          <MenuItem key={sector} value={sector}>
+                            {sector}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="Qualifications"
+                        name="qualifications"
+                        value={form.qualifications}
+                        onChange={handleChange}
+                        helperText={errors.qualifications || 'Separate items with commas.'}
+                        error={Boolean(errors.qualifications)}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="Job summary"
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        error={Boolean(errors.description)}
+                        helperText={errors.description}
+                        multiline
+                        minRows={3}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="Applicant tracker"
+                        name="applicants"
+                        value={form.applicants}
+                        onChange={handleChange}
+                        helperText="Optional comma-separated applicant names."
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        label="Contact email"
+                        name="contactEmail"
+                        value={form.contactEmail}
+                        onChange={handleChange}
+                        error={Boolean(errors.contactEmail)}
+                        helperText={errors.contactEmail}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <Button component="label" variant="outlined" fullWidth startIcon={<AttachFileRounded />}>
+                        Upload job brief
+                        <input hidden type="file" accept="application/pdf,image/png,image/jpeg,image/webp" onChange={handleDocumentChange} />
+                      </Button>
+                      <Typography variant="caption" color={errors.document ? 'error' : 'text.secondary'}>
+                        {errors.document || 'Accepted types: PDF, JPG, PNG, WEBP. Max size: 5MB.'}
+                      </Typography>
+                      {preview && (
+                        <Box className="file-preview file-preview--document">
+                          <Box>
+                            <Typography variant="body2">{preview.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {(preview.size / 1024).toFixed(1)} KB
+                            </Typography>
+                          </Box>
+                          {preview.type.startsWith('image/') ? (
+                            <img src={preview.url} alt={preview.name} className="file-preview__image" />
+                          ) : (
+                            <>
+                              <object data={preview.url} type="application/pdf" className="file-preview__pdf">
+                                <Link href={preview.url} target="_blank" rel="noreferrer">
+                                  Open PDF preview
+                                </Link>
+                              </object>
                               <Link href={preview.url} target="_blank" rel="noreferrer">
-                                Open PDF preview
+                                Open PDF in new tab
                               </Link>
-                            </object>
-                            <Link href={preview.url} target="_blank" rel="noreferrer">
-                              Open PDF in new tab
-                            </Link>
-                          </>
-                        )}
-                      </Box>
-                    )}
+                            </>
+                          )}
+                        </Box>
+                      )}
+                    </Grid>
+                    <Grid size={12}>
+                      <Button type="submit" variant="contained" fullWidth size="large">
+                        Publish opportunity
+                      </Button>
+                    </Grid>
                   </Grid>
-                  <Grid size={12}>
-                    <Button type="submit" variant="contained" fullWidth size="large">
-                      Publish referral
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-        <Grid size={{ xs: 12, xl: 8 }}>
+        <Grid size={{ xs: 12, xl: canPublishJobs ? 8 : 12 }}>
           <Grid container spacing={2.5}>
             {jobs.map((job) => (
               <Grid key={job.id} size={{ xs: 12, lg: 6 }}>
@@ -283,9 +287,17 @@ export default function JobsPage({ jobs, onAddJob, onDeleteJob }) {
                           {job.company} | {job.location || 'Location TBC'} | {job.type}
                         </Typography>
                       </Box>
-                      <Button color="error" onClick={() => setDeleteTarget(job)} startIcon={<DeleteOutlineRounded />}>
-                        Delete
-                      </Button>
+                      {canPublishJobs && (
+                        <Button color="error" onClick={() => setDeleteTarget(job)} startIcon={<DeleteOutlineRounded />}>
+                          Delete
+                        </Button>
+                      )}
+                    </Stack>
+
+                    <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }}>
+                      <Chip label={job.sector} size="small" />
+                      <Chip label={`Shared by ${job.postedByName}`} size="small" variant="outlined" />
+                      <Chip label={getRoleLabel(job.postedByRole)} size="small" variant="outlined" />
                     </Stack>
 
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
@@ -333,10 +345,10 @@ export default function JobsPage({ jobs, onAddJob, onDeleteJob }) {
       </Grid>
 
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>Delete referral post?</DialogTitle>
+        <DialogTitle>Delete opportunity?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            Remove {deleteTarget?.title} from the job referral board.
+            Remove {deleteTarget?.title} from the opportunity board.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -346,7 +358,7 @@ export default function JobsPage({ jobs, onAddJob, onDeleteJob }) {
             onClick={() => {
               onDeleteJob(deleteTarget.id);
               setDeleteTarget(null);
-              toast.success('Job referral deleted.');
+              toast.success('Opportunity deleted.');
             }}
           >
             Delete

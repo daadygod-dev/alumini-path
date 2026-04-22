@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Toaster } from 'react-hot-toast';
@@ -12,15 +12,55 @@ import EducationHistoryPage from './pages/EducationHistoryPage.jsx';
 import SignIn from './auth/Signin.jsx';
 import ForgotPassword from './auth/ForgotPassword.jsx';
 import { getTheme } from './theme/theme.js';
-import { seedAlumni, seedJobs } from './data/mockData.js';
-import { ALUMNI_STORAGE_KEY, AUTH_USER_STORAGE_KEY, JOBS_STORAGE_KEY, loadStoredCollection, saveStoredCollection } from './auth/authStorage.js';
+import { seedJobs, seedMembers } from './data/mockData.js';
+import {
+  canConnectMembers,
+  canViewAnalytics,
+  canViewEducationHistory,
+  normalizeJob,
+  normalizeMember,
+  USER_ROLES,
+} from './data/platformConfig.js';
+import {
+  ALUMNI_STORAGE_KEY,
+  AUTH_USER_STORAGE_KEY,
+  JOBS_STORAGE_KEY,
+  loadStoredCollection,
+  saveStoredCollection,
+} from './auth/authStorage.js';
+
+function buildAuthUser(member) {
+  return {
+    id: member.id,
+    fullName: member.fullName,
+    email: member.email,
+    role: member.role,
+  };
+}
+
+function loadMembers() {
+  const stored = loadStoredCollection(ALUMNI_STORAGE_KEY, seedMembers);
+  return (Array.isArray(stored) ? stored : seedMembers).map(normalizeMember);
+}
+
+function loadJobs() {
+  const stored = loadStoredCollection(JOBS_STORAGE_KEY, seedJobs);
+  return (Array.isArray(stored) ? stored : seedJobs).map(normalizeJob);
+}
 
 export default function Root() {
   const [mode, setMode] = useState(() => localStorage.getItem('theme-mode') || 'light');
-  const [alumni, setAlumni] = useState(() => loadStoredCollection(ALUMNI_STORAGE_KEY, seedAlumni));
-  const [jobs, setJobs] = useState(seedJobs);
-  const [currentUser, setCurrentUser] = useState(() => loadStoredCollection(AUTH_USER_STORAGE_KEY, null));
-  const currentProfile = currentUser ? alumni.find((entry) => entry.id === currentUser.id) || null : null;
+  const [members, setMembers] = useState(loadMembers);
+  const [jobs, setJobs] = useState(loadJobs);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const stored = loadStoredCollection(AUTH_USER_STORAGE_KEY, null);
+    return stored ? { ...stored, role: stored.role || USER_ROLES.alumni } : null;
+  });
+
+  const currentProfile = useMemo(
+    () => (currentUser ? members.find((entry) => entry.id === currentUser.id) || null : null),
+    [currentUser, members],
+  );
 
   useEffect(() => {
     localStorage.setItem('theme-mode', mode);
@@ -28,8 +68,8 @@ export default function Root() {
   }, [mode]);
 
   useEffect(() => {
-    saveStoredCollection(ALUMNI_STORAGE_KEY, alumni);
-  }, [alumni]);
+    saveStoredCollection(ALUMNI_STORAGE_KEY, members);
+  }, [members]);
 
   useEffect(() => {
     const lightweightJobs = jobs.map(({ document, ...job }) => ({
@@ -50,22 +90,42 @@ export default function Root() {
   }, [jobs]);
 
   useEffect(() => {
-    if (currentUser) {
-      saveStoredCollection(AUTH_USER_STORAGE_KEY, currentUser);
+    if (!currentUser) {
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
       return;
     }
 
-    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    saveStoredCollection(AUTH_USER_STORAGE_KEY, currentUser);
   }, [currentUser]);
 
   const toggleTheme = () => setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
 
-  const addAlumni = (entry) => {
-    setAlumni((prev) => [{ ...entry, id: Date.now() }, ...prev]);
+  const addMember = (entry) => {
+    const emailInUse = members.some((member) => member.email.toLowerCase() === entry.email.toLowerCase());
+
+    if (emailInUse) {
+      return { ok: false, reason: 'Email already exists in the directory.' };
+    }
+
+    setMembers((prev) => [{ ...normalizeMember(entry), id: Date.now() }, ...prev]);
+    return { ok: true };
   };
 
   const addJob = (entry) => {
-    setJobs((prev) => [{ ...entry, id: Date.now() }, ...prev]);
+    if (!currentUser) {
+      return;
+    }
+
+    setJobs((prev) => [
+      {
+        ...normalizeJob(entry),
+        id: Date.now(),
+        postedById: currentUser.id,
+        postedByName: currentUser.fullName,
+        postedByRole: currentUser.role,
+      },
+      ...prev,
+    ]);
   };
 
   const deleteJob = (id) => {
@@ -73,7 +133,7 @@ export default function Root() {
   };
 
   const signIn = ({ email, password }) => {
-    const matchedUser = alumni.find(
+    const matchedUser = members.find(
       (entry) => entry.email.toLowerCase() === email.toLowerCase() && entry.password === password,
     );
 
@@ -81,35 +141,28 @@ export default function Root() {
       return false;
     }
 
-    setCurrentUser({
-      id: matchedUser.id,
-      fullName: matchedUser.fullName,
-      email: matchedUser.email,
-    });
+    setCurrentUser(buildAuthUser(matchedUser));
     return true;
   };
 
   const createAccount = (account) => {
-    const emailInUse = alumni.some((entry) => entry.email.toLowerCase() === account.email.toLowerCase());
+    const emailInUse = members.some((entry) => entry.email.toLowerCase() === account.email.toLowerCase());
 
     if (emailInUse) {
       return { ok: false, reason: 'Email already exists. Sign in instead.' };
     }
 
-    const record = {
+    const record = normalizeMember({
       ...account,
       id: Date.now(),
       mentorshipCount: 0,
       posts: account.posts || [],
+      connections: [],
       avatar: account.avatar || null,
-    };
-
-    setAlumni((prev) => [record, ...prev]);
-    setCurrentUser({
-      id: record.id,
-      fullName: record.fullName,
-      email: record.email,
     });
+
+    setMembers((prev) => [record, ...prev]);
+    setCurrentUser(buildAuthUser(record));
 
     return { ok: true };
   };
@@ -119,14 +172,14 @@ export default function Root() {
   };
 
   const requestPasswordReset = (email) =>
-    alumni.some((entry) => entry.email.toLowerCase() === email.toLowerCase());
+    members.some((entry) => entry.email.toLowerCase() === email.toLowerCase());
 
   const updateCurrentUserProfile = (updates) => {
     if (!currentUser) {
       return { ok: false, reason: 'No signed in user.' };
     }
 
-    const emailInUse = alumni.some(
+    const emailInUse = members.some(
       (entry) => entry.id !== currentUser.id && entry.email.toLowerCase() === updates.email.toLowerCase(),
     );
 
@@ -134,16 +187,70 @@ export default function Root() {
       return { ok: false, reason: 'That email address is already in use.' };
     }
 
-    setAlumni((prev) =>
-      prev.map((entry) => (entry.id === currentUser.id ? { ...entry, ...updates, id: currentUser.id } : entry)),
+    setMembers((prev) =>
+      prev.map((entry) => (entry.id === currentUser.id ? normalizeMember({ ...entry, ...updates, id: currentUser.id }) : entry)),
     );
-    setCurrentUser((prev) => ({
-      ...prev,
-      fullName: updates.fullName,
-      email: updates.email,
-    }));
+    setCurrentUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            fullName: updates.fullName,
+            email: updates.email,
+            role: updates.role || prev.role,
+          }
+        : prev,
+    );
 
     return { ok: true };
+  };
+
+  const toggleConnection = (targetId) => {
+    if (!currentUser) {
+      return { ok: false, reason: 'No signed in user.' };
+    }
+
+    const source = members.find((entry) => entry.id === currentUser.id);
+    const target = members.find((entry) => entry.id === targetId);
+
+    if (!source || !target) {
+      return { ok: false, reason: 'Selected member was not found.' };
+    }
+
+    if (!canConnectMembers(source.role, target.role)) {
+      return { ok: false, reason: 'Connections are only available between alumni and students.' };
+    }
+
+    const isConnected = source.connections.includes(targetId);
+
+    setMembers((prev) =>
+      prev.map((entry) => {
+        if (entry.id === source.id) {
+          return {
+            ...entry,
+            connections: isConnected
+              ? entry.connections.filter((id) => id !== targetId)
+              : [...entry.connections, targetId],
+          };
+        }
+
+        if (entry.id === target.id) {
+          return {
+            ...entry,
+            connections: isConnected
+              ? entry.connections.filter((id) => id !== source.id)
+              : [...entry.connections, source.id],
+          };
+        }
+
+        return entry;
+      }),
+    );
+
+    return {
+      ok: true,
+      connected: !isConnected,
+      targetName: target.fullName,
+    };
   };
 
   return (
@@ -174,7 +281,7 @@ export default function Root() {
                 <AppLayout
                   mode={mode}
                   toggleTheme={toggleTheme}
-                  alumniCount={alumni.length}
+                  memberCount={members.length}
                   jobCount={jobs.length}
                   currentUser={currentUser}
                   currentProfile={currentProfile}
@@ -185,24 +292,50 @@ export default function Root() {
               )
             }
           >
-            <Route path="dashboard" element={<DashboardPage alumni={alumni} jobs={jobs} />} />
+            <Route
+              path="dashboard"
+              element={<DashboardPage members={members} jobs={jobs} currentUser={currentUser} currentProfile={currentProfile} />}
+            />
             <Route
               path="profile"
               element={<ProfilePage currentProfile={currentProfile} onSaveProfile={updateCurrentUserProfile} />}
             />
             <Route
               path="education-history"
-              element={<EducationHistoryPage currentProfile={currentProfile} onSaveProfile={updateCurrentUserProfile} />}
+              element={
+                currentProfile && canViewEducationHistory(currentProfile.role) ? (
+                  <EducationHistoryPage currentProfile={currentProfile} onSaveProfile={updateCurrentUserProfile} />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
             />
             <Route
               path="alumni"
-              element={<AlumniPage alumni={alumni} onAddAlumni={addAlumni} />}
+              element={
+                <AlumniPage
+                  members={members}
+                  currentUser={currentUser}
+                  currentProfile={currentProfile}
+                  onAddMember={addMember}
+                  onToggleConnection={toggleConnection}
+                />
+              }
             />
             <Route
               path="jobs"
-              element={<JobsPage jobs={jobs} onAddJob={addJob} onDeleteJob={deleteJob} />}
+              element={<JobsPage jobs={jobs} currentUser={currentUser} onAddJob={addJob} onDeleteJob={deleteJob} />}
             />
-            <Route path="analytics" element={<AnalyticsPage alumni={alumni} jobs={jobs} />} />
+            <Route
+              path="analytics"
+              element={
+                currentProfile && canViewAnalytics(currentProfile.role) ? (
+                  <AnalyticsPage members={members} jobs={jobs} />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
           </Route>
           <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/'} replace />} />
         </Routes>

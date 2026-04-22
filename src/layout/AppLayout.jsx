@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AppBar,
   Avatar,
   Box,
+  Chip,
   Divider,
   Drawer,
   IconButton,
@@ -24,35 +25,76 @@ import {
   LogoutRounded,
   LightModeRounded,
   MenuRounded,
-  PersonRounded,
   PeopleAltRounded,
+  PersonRounded,
   WorkOutlineRounded,
 } from '@mui/icons-material';
 import { NavLink, Outlet } from 'react-router-dom';
 import Logo from '../assets/alumini-path-logo.webp';
+import { canViewAnalytics, canViewEducationHistory, getRoleLabel, USER_ROLES } from '../data/platformConfig.js';
 import '../styles/app-layout.scss';
 
 const expandedDrawerWidth = 280;
 const collapsedDrawerWidth = 92;
 
-const navItems = [
-  { label: 'Overview', icon: <BadgeRounded />, to: '/dashboard' },
-  { label: 'My Profile', icon: <PersonRounded />, to: '/profile' },
-  { label: 'Education History', icon: <HistoryEduRounded />, to: '/education-history' },
-  { label: 'Alumni Directory', icon: <PeopleAltRounded />, to: '/alumni' },
-  { label: 'Job Referrals', icon: <WorkOutlineRounded />, to: '/jobs' },
-  { label: 'Analytics', icon: <AnalyticsRounded />, to: '/analytics' },
-];
+function getNavItems(role) {
+  const baseItems = [
+    { label: 'Overview', icon: <BadgeRounded />, to: '/dashboard' },
+    { label: 'My Profile', icon: <PersonRounded />, to: '/profile' },
+    { label: 'Community', icon: <PeopleAltRounded />, to: '/alumni' },
+    { label: 'Opportunities', icon: <WorkOutlineRounded />, to: '/jobs' },
+  ];
 
-function DrawerContent({ alumniCount, jobCount, closeDrawer, currentUser, currentProfile, onSignOut, collapsed, onToggleCollapse }) {
+  if (canViewEducationHistory(role)) {
+    baseItems.splice(2, 0, { label: 'History', icon: <HistoryEduRounded />, to: '/education-history' });
+  }
+
+  if (canViewAnalytics(role)) {
+    baseItems.push({ label: 'Analytics', icon: <AnalyticsRounded />, to: '/analytics' });
+  }
+
+  return baseItems;
+}
+
+function getTopbarTitle(role) {
+  if (role === USER_ROLES.student) {
+    return 'Student workspace';
+  }
+
+  if (role === USER_ROLES.employee) {
+    return 'Employee workspace';
+  }
+
+  if (role === USER_ROLES.schoolLeader) {
+    return 'Leadership workspace';
+  }
+
+  return 'Alumni workspace';
+}
+
+function DrawerContent({
+  memberCount,
+  jobCount,
+  closeDrawer,
+  currentUser,
+  currentProfile,
+  onSignOut,
+  collapsed,
+  onToggleCollapse,
+}) {
+  const activeRole = currentProfile?.role || currentUser.role;
+  const navItems = useMemo(() => getNavItems(activeRole), [activeRole]);
+
   return (
     <Box className={`app-shell__drawer${collapsed ? ' is-collapsed' : ''}`}>
       <Box className="app-shell__brand">
         <Avatar src={Logo} variant="rounded" className="app-shell__brand-mark" />
         {!collapsed && (
           <Box>
-            
             <Typography variant="h6">Alumini-Path</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Role-aware alumni platform
+            </Typography>
           </Box>
         )}
       </Box>
@@ -69,14 +111,14 @@ function DrawerContent({ alumniCount, jobCount, closeDrawer, currentUser, curren
       </Box>
 
       {!collapsed && (
-        <Box className="app-shell__metrics">
+        <Stack spacing={1} className="app-shell__metrics">
           <Typography variant="caption" color="text.secondary">
-            {alumniCount} alumni
+            {memberCount} community members
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {jobCount} jobs
-          </Typography>
-        </Box>
+            <Typography variant="caption" color="text.secondary">
+              {jobCount} open opportunities
+            </Typography>
+        </Stack>
       )}
 
       <Divider />
@@ -100,6 +142,12 @@ function DrawerContent({ alumniCount, jobCount, closeDrawer, currentUser, curren
         <Avatar src={currentProfile?.avatar?.url} className="app-shell__user-avatar">
           {currentUser.fullName?.slice(0, 1)}
         </Avatar>
+        {!collapsed && (
+          <>
+            <Typography variant="subtitle2">{currentUser.fullName}</Typography>
+            <Chip size="small" label={getRoleLabel(activeRole)} />
+          </>
+        )}
         <ListItemButton className="app-shell__nav-item" onClick={onSignOut}>
           <ListItemIcon>
             <LogoutRounded />
@@ -111,9 +159,10 @@ function DrawerContent({ alumniCount, jobCount, closeDrawer, currentUser, curren
   );
 }
 
-export default function AppLayout({ mode, toggleTheme, alumniCount, jobCount, currentUser, currentProfile, onSignOut }) {
+export default function AppLayout({ mode, toggleTheme, memberCount, jobCount, currentUser, currentProfile, onSignOut }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const activeRole = currentProfile?.role || currentUser.role;
 
   const handleDrawerToggle = () => {
     setMobileOpen((prev) => !prev);
@@ -146,9 +195,9 @@ export default function AppLayout({ mode, toggleTheme, alumniCount, jobCount, cu
 
           <Box>
             <Typography variant="overline" className="app-shell__eyebrow">
-              Alumni Networking & Job Referral System
+              Alumni, students, employees, and school leaders
             </Typography>
-            <Typography variant="h6">Operational dashboard</Typography>
+            <Typography variant="h6">{getTopbarTitle(activeRole)}</Typography>
           </Box>
 
           <Box sx={{ flexGrow: 1 }} />
@@ -171,7 +220,7 @@ export default function AppLayout({ mode, toggleTheme, alumniCount, jobCount, cu
           }}
         >
           <DrawerContent
-            alumniCount={alumniCount}
+            memberCount={memberCount}
             jobCount={jobCount}
             closeDrawer={closeDrawer}
             currentUser={currentUser}
@@ -196,7 +245,7 @@ export default function AppLayout({ mode, toggleTheme, alumniCount, jobCount, cu
           }}
         >
           <DrawerContent
-            alumniCount={alumniCount}
+            memberCount={memberCount}
             jobCount={jobCount}
             closeDrawer={closeDrawer}
             currentUser={currentUser}

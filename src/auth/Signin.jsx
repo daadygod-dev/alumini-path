@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { HowToRegRounded, LoginRounded } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  departments,
+  getOrganizationFieldLabel,
+  getRoleFieldLabel,
+  getRoleLabel,
+  getYearFieldLabel,
+  roleOptions,
+  USER_ROLES,
+} from '../data/platformConfig.js';
 import './signin.scss';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +25,7 @@ const emptyCreateAccount = {
   fullName: '',
   email: '',
   password: '',
+  role: USER_ROLES.alumni,
   department: '',
   graduationYear: '',
   currentRole: '',
@@ -28,10 +38,21 @@ const emptyCreateAccount = {
   bio: '',
 };
 
+const demoAccounts = [
+  { role: USER_ROLES.alumni, email: 'aline.mukamana@alumninet.rw' },
+  { role: USER_ROLES.student, email: 'cedric.mugenzi@campus.rw' },
+  { role: USER_ROLES.employee, email: 'diane.uwase@institution.rw' },
+  { role: USER_ROLES.schoolLeader, email: 'emmanuel.nshuti@institution.rw' },
+];
+
 export default function SignIn({ onSignIn, onCreateAccount }) {
   const [mode, setMode] = useState('signin');
   const [signInForm, setSignInForm] = useState(emptySignIn);
   const [createForm, setCreateForm] = useState(emptyCreateAccount);
+
+  const yearLabel = useMemo(() => getYearFieldLabel(createForm.role), [createForm.role]);
+  const roleFieldLabel = useMemo(() => getRoleFieldLabel(createForm.role), [createForm.role]);
+  const organizationLabel = useMemo(() => getOrganizationFieldLabel(createForm.role), [createForm.role]);
 
   const handleSignInChange = (event) => {
     const { name, value } = event.target;
@@ -78,12 +99,12 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
     }
 
     if (!/^\d{4}$/.test(createForm.graduationYear)) {
-      toast.error('Graduation year must be numeric.');
+      toast.error(`${yearLabel} must be a 4-digit year.`);
       return;
     }
 
     if (!createForm.department || !createForm.currentRole.trim() || !createForm.company.trim() || !createForm.skills.trim()) {
-      toast.error('Complete the department, current job details, and skills fields.');
+      toast.error('Complete the department, role, organization, and skills fields.');
       return;
     }
 
@@ -95,6 +116,7 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
       jobHistory: createForm.jobHistory.split('\n').map((item) => item.trim()).filter(Boolean),
       employmentSector: createForm.employmentSector || 'General',
       posts: [],
+      connections: [],
       avatar: null,
     });
 
@@ -115,10 +137,11 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
               Alumni Networking & Job Referral System
             </Typography>
             <Typography variant="h4" className="signin-title">
-              {mode === 'signin' ? 'Login to continue' : 'Create your alumni account'}
+              {mode === 'signin' ? 'Login to continue' : 'Create your community account'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Users must sign in or create an account before they can access alumni records, referrals, and analytics.
+              The platform now supports alumni, students, employees, and school leaders with different workspaces and
+              permissions.
             </Typography>
           </Box>
 
@@ -151,6 +174,17 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
                   helperText="Password must be at least 6 characters."
                   fullWidth
                 />
+                <Box className="signin-demo-box">
+                  <Typography variant="subtitle2">Demo accounts</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Password for all demo users: <strong>Pass123!</strong>
+                  </Typography>
+                  {demoAccounts.map((account) => (
+                    <Typography key={account.email} variant="body2" color="text.secondary">
+                      {getRoleLabel(account.role)}: {account.email}
+                    </Typography>
+                  ))}
+                </Box>
                 <Typography variant="body2" className="signin-link-row">
                   <Link to="/forgot-password">Forgot password?</Link>
                 </Typography>
@@ -172,6 +206,13 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
                   onChange={handleCreateChange}
                   fullWidth
                 />
+                <TextField label="User role" name="role" select value={createForm.role} onChange={handleCreateChange} fullWidth>
+                  {roleOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 <TextField
                   label="Department"
                   name="department"
@@ -180,28 +221,29 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
                   onChange={handleCreateChange}
                   fullWidth
                 >
-                  <MenuItem value="Information Technology">Information Technology</MenuItem>
-                  <MenuItem value="Computer Science">Computer Science</MenuItem>
-                  <MenuItem value="Business Information Systems">Business Information Systems</MenuItem>
-                  <MenuItem value="Networking">Networking</MenuItem>
+                  {departments.map((department) => (
+                    <MenuItem key={department} value={department}>
+                      {department}
+                    </MenuItem>
+                  ))}
                 </TextField>
                 <TextField
-                  label="Graduation year"
+                  label={yearLabel}
                   name="graduationYear"
                   value={createForm.graduationYear}
                   onChange={handleCreateChange}
-                  helperText="Enter a 4-digit numeric graduation year."
+                  helperText="Enter a 4-digit year."
                   fullWidth
                 />
                 <TextField
-                  label="Current role"
+                  label={roleFieldLabel}
                   name="currentRole"
                   value={createForm.currentRole}
                   onChange={handleCreateChange}
                   fullWidth
                 />
                 <TextField
-                  label="Current company"
+                  label={organizationLabel}
                   name="company"
                   value={createForm.company}
                   onChange={handleCreateChange}
@@ -209,15 +251,15 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
                 />
                 <TextField label="Location" name="location" value={createForm.location} onChange={handleCreateChange} fullWidth />
                 <TextField
-                  label="Employment sector"
+                  label="Sector"
                   name="employmentSector"
                   value={createForm.employmentSector}
                   onChange={handleCreateChange}
-                  helperText="Required for analytics and profile grouping."
+                  helperText="Used for grouping, referrals, and analytics."
                   fullWidth
                 />
                 <TextField
-                  label="Skill sets"
+                  label="Skills"
                   name="skills"
                   value={createForm.skills}
                   onChange={handleCreateChange}
@@ -235,11 +277,11 @@ export default function SignIn({ onSignIn, onCreateAccount }) {
                   fullWidth
                 />
                 <TextField
-                  label="Current and previous job details"
+                  label="Experience history"
                   name="jobHistory"
                   value={createForm.jobHistory}
                   onChange={handleCreateChange}
-                  helperText="Use one line per role."
+                  helperText="Use one line per experience item."
                   multiline
                   minRows={2}
                   fullWidth

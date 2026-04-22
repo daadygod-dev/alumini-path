@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Button, Card, CardContent, Grid, Stack, TextField, Typography } from '@mui/material';
 import toast from 'react-hot-toast';
+import { getRoleLabel, USER_ROLES } from '../data/platformConfig.js';
 import '../styles/feature-pages.scss';
 
 export default function EducationHistoryPage({ currentProfile, onSaveProfile }) {
@@ -56,10 +57,11 @@ export default function EducationHistoryPage({ currentProfile, onSaveProfile }) 
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">Education History</Typography>
+        <Typography variant="h4">
+          {currentProfile.role === USER_ROLES.student ? 'Academic Progress' : 'Education History'}
+        </Typography>
         <Typography variant="body1" color="text.secondary">
-          Maintain your education records, current and previous job details, and skill sets from a dedicated sidebar
-          section.
+          Maintain the education, experience, and skills details used in your {getRoleLabel(currentProfile.role).toLowerCase()} profile.
         </Typography>
       </Box>
 
@@ -82,7 +84,7 @@ export default function EducationHistoryPage({ currentProfile, onSaveProfile }) 
               </Grid>
               <Grid size={12}>
                 <TextField
-                  label="Current and previous job details"
+                  label={currentProfile.role === USER_ROLES.student ? 'Projects, internships, and experience' : 'Current and previous job details'}
                   name="jobHistory"
                   value={form.jobHistory}
                   onChange={handleChange}
