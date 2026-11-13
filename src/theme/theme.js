@@ -1,69 +1,90 @@
 import { createTheme } from '@mui/material';
 
-export const getTheme = (mode = 'light') =>
-  createTheme({
+export const getTheme = (mode = 'light') => {
+  const isLight = mode === 'light';
+
+  return createTheme({
     palette: {
       mode,
       primary: {
-        main: mode === 'light' ? '#0f766e' : '#5eead4',
+        main: isLight ? '#0d6e66' : '#4fd1c5',
+        contrastText: isLight ? '#ffffff' : '#081c1a',
       },
       secondary: {
-        main: mode === 'light' ? '#c2410c' : '#fb923c',
+        main: isLight ? '#b84a1e' : '#f08a5d',
       },
       background: {
-        default: mode === 'light' ? '#f3f7fb' : '#0f172a',
-        paper: mode === 'light' ? '#ffffff' : '#152238',
+        default: isLight ? '#f6f5f0' : '#0b0f14',
+        paper: isLight ? '#ffffff' : '#121821',
       },
       text: {
-        primary: mode === 'light' ? '#0f172a' : '#e5edf7',
-        secondary: mode === 'light' ? '#475569' : '#9fb2cc',
+        primary: isLight ? '#14181f' : '#eff3f8',
+        secondary: isLight ? '#525b69' : '#9aa7b8',
       },
-      divider: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(148, 163, 184, 0.18)',
+      divider: isLight ? '#e4e2da' : '#212b38',
     },
     shape: {
-      borderRadius: 18,
+      borderRadius: 10,
     },
     typography: {
-      fontFamily: "'Inter Tight', sans-serif",
+      fontFamily: "'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif",
       h3: {
-        fontWeight: 800,
-        letterSpacing: '-0.03em',
-        fontSize: '2.1rem',
+        fontWeight: 700,
+        letterSpacing: '-0.025em',
+        fontSize: '1.875rem',
+        lineHeight: 1.18,
       },
       h4: {
         fontWeight: 700,
         letterSpacing: '-0.02em',
-        fontSize: '1.65rem',
+        fontSize: '1.5rem',
+        lineHeight: 1.25,
       },
       h5: {
         fontWeight: 700,
-        fontSize: '1.15rem',
+        letterSpacing: '-0.015em',
+        fontSize: '1.125rem',
+        lineHeight: 1.35,
       },
       h6: {
-        fontSize: '0.98rem',
+        fontWeight: 600,
+        letterSpacing: '-0.01em',
+        fontSize: '0.975rem',
+        lineHeight: 1.4,
       },
       subtitle1: {
-        fontSize: '0.92rem',
+        fontWeight: 600,
+        fontSize: '0.9375rem',
+        lineHeight: 1.45,
       },
       subtitle2: {
-        fontSize: '0.82rem',
+        fontWeight: 600,
+        fontSize: '0.8125rem',
+        lineHeight: 1.45,
       },
       body1: {
-        fontSize: '0.9rem',
+        fontSize: '0.9375rem',
+        lineHeight: 1.55,
       },
       body2: {
-        fontSize: '0.78rem',
+        fontSize: '0.8125rem',
+        lineHeight: 1.5,
       },
       caption: {
-        fontSize: '0.7rem',
+        fontSize: '0.75rem',
+        lineHeight: 1.4,
       },
       overline: {
-        fontSize: '0.58rem',
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        lineHeight: 1.4,
       },
       button: {
         textTransform: 'none',
-        fontWeight: 700,
-        fontSize: '0.82rem',
+        fontWeight: 600,
+        fontSize: '0.84rem',
+        letterSpacing: '-0.005em',
       },
     },
     components: {
@@ -74,17 +95,73 @@ export const getTheme = (mode = 'light') =>
           },
         },
       },
+      MuiCard: {
+        defaultProps: {
+          elevation: 0,
+        },
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            border: `1px solid ${isLight ? '#e4e2da' : '#212b38'}`,
+            backgroundColor: isLight ? '#ffffff' : '#121821',
+          },
+        },
+      },
+      MuiCardContent: {
+        styleOverrides: {
+          root: {
+            padding: '22px',
+            '&:last-child': {
+              paddingBottom: '22px',
+            },
+          },
+        },
+      },
       MuiButton: {
         defaultProps: {
           disableElevation: true,
+        },
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            paddingInline: 16,
+            paddingBlock: 8,
+          },
+          sizeLarge: {
+            paddingInline: 20,
+            paddingBlock: 10,
+          },
+          sizeSmall: {
+            paddingInline: 12,
+            paddingBlock: 5,
+            fontSize: '0.78rem',
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+          },
         },
       },
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 999,
+            borderRadius: 6,
+            fontWeight: 500,
+            fontSize: '0.75rem',
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 12,
+            border: `1px solid ${isLight ? '#e4e2da' : '#212b38'}`,
           },
         },
       },
     },
   });
+};
