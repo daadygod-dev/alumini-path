@@ -10,11 +10,6 @@
 
 require_once __DIR__ . '/../config/database.php';
 
-$db_host = '127.0.0.1';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'alumni_network';
-
 $messages = array();
 
 /*
@@ -94,7 +89,7 @@ function run_sql_file($connection, $path, &$messages)
 /*
  * Creates the database and loads everything.
  */
-$connection = mysqli_connect($db_host, $db_user, $db_pass);
+$connection = mysqli_connect($db_host, $db_user, $db_pass, '', $db_port);
 
 if ($connection === false) {
     die('Could not connect to MySQL: ' . mysqli_connect_error());

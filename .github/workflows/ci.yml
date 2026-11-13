@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  frontend:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build production bundle
+        run: npm run build
+
+  backend:
+    name: PHP & MySQL API Smoke Tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_test_pass
+          MYSQL_DATABASE: alumni_network
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot_test_pass"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, curl, fileinfo, json
+
+      - name: Check PHP syntax and beginner-friendly rules
+        run: |
+          find api -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          if grep -rnE --include='*.php' '(\bclass\s|\->|\bthrow\s|\bcatch\s|Exception|\?\?|\bpreg_|instanceof)' api/; then
+            echo "Found forbidden advanced PHP construct."
+            exit 1
+          fi
+
+      - name: Import database schema and seed data
+        env:
+          MYSQL_PWD: root_test_pass
+        run: |
+          mysql -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS alumni_network;"
+          mysql -h 127.0.0.1 -u root alumni_network < api/database/schema.sql
+          mysql -h 127.0.0.1 -u root alumni_network < api/database/seed.sql
+
+      - name: Boot API server and run smoke test suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_NAME: alumni_network
+          DB_USER: root
+          DB_PASS: root_test_pass
+        run: |
+          php -S 127.0.0.1:8085 > /tmp/php-ci.log 2>&1 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8085/api/index.php >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          php api/tests/smoke_test.php

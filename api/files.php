@@ -10,6 +10,8 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/helpers.php';
 require_once __DIR__ . '/config/auth.php';
 
+send_cors_headers();
+
 $file_id = query_int('id', 0);
 
 if ($file_id < 1) {

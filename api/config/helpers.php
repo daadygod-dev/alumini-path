@@ -4,6 +4,40 @@
  */
 
 /*
+ * Adds CORS headers for cross-origin frontends (such as Vercel) and
+ * answers browser OPTIONS preflight requests immediately.
+ */
+function send_cors_headers()
+{
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? trim($_SERVER['HTTP_ORIGIN']) : '';
+    $allowed_raw = getenv('CORS_ALLOWED_ORIGINS');
+
+    if ($allowed_raw === false || trim($allowed_raw) === '') {
+        $allowed_raw = '*';
+    }
+
+    if (trim($allowed_raw) === '*') {
+        header('Access-Control-Allow-Origin: *');
+    } elseif ($origin !== '') {
+        $allowed_list = split_list($allowed_raw);
+
+        if (in_array($origin, $allowed_list, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Vary: Origin');
+        }
+    }
+
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    header('Access-Control-Max-Age: 86400');
+
+    if (isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD']) === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+}
+
+/*
  * Sends a JSON answer and stops the script.
  */
 function reply_json($payload, $http_code = 200)

@@ -13,6 +13,8 @@ require_once __DIR__ . '/config/validation.php';
 require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/uploads.php';
 
+send_cors_headers();
+
 require_once __DIR__ . '/endpoints/auth.php';
 require_once __DIR__ . '/endpoints/directory.php';
 require_once __DIR__ . '/endpoints/jobs.php';

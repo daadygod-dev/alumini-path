@@ -6,11 +6,26 @@
  * The XAMPP default is root with an empty password.
  */
 
-$db_host = '127.0.0.1';
-$db_port = 3306;
-$db_name = 'alumni_network';
-$db_user = 'root';
-$db_pass = '';
+/*
+ * Reads a setting from an environment variable, falling back to $default
+ * for local XAMPP development.
+ */
+function db_env($name, $default = '')
+{
+    $value = getenv($name);
+
+    if ($value === false || $value === '') {
+        return $default;
+    }
+
+    return $value;
+}
+
+$db_host = db_env('DB_HOST', '127.0.0.1');
+$db_port = (int) db_env('DB_PORT', '3306');
+$db_name = db_env('DB_NAME', 'alumni_network');
+$db_user = db_env('DB_USER', 'root');
+$db_pass = db_env('DB_PASS', '');
 
 /*
  * Opens one connection to MySQL and keeps it in $GLOBALS['db'].
